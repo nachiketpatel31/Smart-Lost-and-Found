@@ -1,0 +1,17 @@
+{
+  "name": "smart-lost-and-found",
+  "version": "1.0.0",
+  "description": "Smart Lost & Found Management System with Hybrid Image + Metadata Similarity Engine",
+  "main": "server/server.js",
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "seed": "cd server && node utils/seed.js",
+    "make-admin": "cd server && node utils/makeAdmin.js",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
