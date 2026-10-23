@@ -1,7 +1,11 @@
-require('dotenv').config({ path: '../.env' });
+const path = require('path');
+const dotenv = require('dotenv');
+
+// Load environment variables from server/.env or root .env
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 
