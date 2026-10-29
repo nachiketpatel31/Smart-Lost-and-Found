@@ -23,7 +23,12 @@ const NotificationBell = () => {
     markAsRead(item._id);
     setOpen(false);
     if (item.link) {
-      navigate(item.link);
+      let target = item.link;
+      // Backward compatibility for legacy or outdated notification links
+      if (target === '/claims/my' || target === '/claims') {
+        target = '/my-claims';
+      }
+      navigate(target);
     }
   };
 

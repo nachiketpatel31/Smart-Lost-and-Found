@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -69,6 +69,9 @@ function App() {
                 <Route path="/report-found" element={<AppLayout showSidebar><ReportFound /></AppLayout>} />
                 <Route path="/my-reports" element={<AppLayout showSidebar><MyReports /></AppLayout>} />
                 <Route path="/my-claims" element={<AppLayout showSidebar><MyClaims /></AppLayout>} />
+                {/* Legacy/alias routes for claim notifications backward-compatibility */}
+                <Route path="/claims/my" element={<Navigate to="/my-claims" replace />} />
+                <Route path="/claims" element={<Navigate to="/my-claims" replace />} />
                 <Route path="/potential-matches" element={<AppLayout showSidebar><PotentialMatches /></AppLayout>} />
                 <Route path="/submit-claim/:itemId" element={<AppLayout showSidebar><SubmitClaim /></AppLayout>} />
                 <Route path="/feedback/:itemId" element={<AppLayout showSidebar><FeedbackForm /></AppLayout>} />

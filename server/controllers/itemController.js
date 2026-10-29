@@ -1,3 +1,4 @@
+const Claim = require('../models/Claim');
 const Item = require('../models/Item');
 const StatusHistory = require('../models/StatusHistory');
 const { generateReportId } = require('../utils/generateReportId');
@@ -266,10 +267,59 @@ const getItemById = async (req, res) => {
 
     const safeItem = applyPrivacyFilter(item, req.user);
 
+    // Retrieve claim approval and ownership verification details with privacy controls
+    let claimInfo = null;
+    if (req.user) {
+      const isReporter = String(item.reporter?._id || item.reporter) === String(req.user._id);
+      const isAdmin = req.user.role === 'admin';
+
+      // 1. Look for Approved Claim on this item
+      const approvedClaim = await Claim.findOne({ item: item._id, status: 'Approved' })
+        .populate('claimant', 'name email phone collegeId')
+        .populate('verifiedBy', 'name');
+
+      if (approvedClaim) {
+        const isClaimant = String(approvedClaim.claimant?._id || approvedClaim.claimant) === String(req.user._id);
+        // Expose claim info ONLY to the item reporter, the approved claimant, or an admin
+        if (isReporter || isClaimant || isAdmin) {
+          claimInfo = {
+            claimId: approvedClaim.claimId,
+            status: approvedClaim.status,
+            adminNote: approvedClaim.adminNote,
+            verifiedAt: approvedClaim.verifiedAt,
+            submittedAt: approvedClaim.submittedAt,
+            isUserClaimant: isClaimant,
+            isUserReporter: isReporter,
+            claimantName: isClaimant || isAdmin ? approvedClaim.claimant?.name : undefined,
+            verifiedByName: approvedClaim.verifiedBy?.name
+          };
+        }
+      } else {
+        // 2. Check if current user has an active or past claim for this item
+        const userClaim = await Claim.findOne({ item: item._id, claimant: req.user._id })
+          .sort({ createdAt: -1 })
+          .populate('verifiedBy', 'name');
+
+        if (userClaim) {
+          claimInfo = {
+            claimId: userClaim.claimId,
+            status: userClaim.status,
+            adminNote: userClaim.adminNote,
+            verifiedAt: userClaim.verifiedAt,
+            submittedAt: userClaim.submittedAt,
+            isUserClaimant: true,
+            isUserReporter: isReporter,
+            verifiedByName: userClaim.verifiedBy?.name
+          };
+        }
+      }
+    }
+
     res.json({
       success: true,
       item: safeItem,
-      statusHistory
+      statusHistory,
+      claimInfo
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

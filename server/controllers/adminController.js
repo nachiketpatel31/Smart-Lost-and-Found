@@ -210,13 +210,26 @@ const approveClaim = async (req, res) => {
       ipAddress: req.ip || '127.0.0.1'
     });
 
+    // Notify Claimant (User 2)
     await Notification.create({
       user: claim.claimant._id,
       title: 'Claim Approved!',
       message: `Great news! Your claim for "${item.itemName}" has been APPROVED. Please visit campus security for physical handover.`,
       type: 'CLAIM_APPROVED',
-      link: `/claims/my`
+      link: `/item/${item._id}`
     });
+
+    // Notify Item Reporter (User 1)
+    const reporterId = item.reporter?._id || item.reporter;
+    if (reporterId && String(reporterId) !== String(claim.claimant._id)) {
+      await Notification.create({
+        user: reporterId,
+        title: 'Claim Approved for Your Item',
+        message: `The ownership claim for your reported item "${item.itemName}" has been verified and APPROVED by admin. Handover will be coordinated by campus security.`,
+        type: 'CLAIM_APPROVED',
+        link: `/item/${item._id}`
+      });
+    }
 
     res.json({
       success: true,
@@ -268,13 +281,26 @@ const rejectClaim = async (req, res) => {
       ipAddress: req.ip || '127.0.0.1'
     });
 
+    // Notify Claimant
     await Notification.create({
       user: claim.claimant._id,
       title: 'Claim Update',
       message: `Your claim for "${item.itemName}" was rejected. Reason: ${claim.adminNote}`,
       type: 'CLAIM_REJECTED',
-      link: `/claims/my`
+      link: `/my-claims`
     });
+
+    // Notify Reporter if different user
+    const rejectReporterId = item.reporter?._id || item.reporter;
+    if (rejectReporterId && String(rejectReporterId) !== String(claim.claimant._id)) {
+      await Notification.create({
+        user: rejectReporterId,
+        title: 'Claim Update for Your Item',
+        message: `A submitted claim for your reported item "${item.itemName}" was reviewed and rejected by admin. The item remains listed.`,
+        type: 'CLAIM_REJECTED',
+        link: `/item/${item._id}`
+      });
+    }
 
     res.json({
       success: true,

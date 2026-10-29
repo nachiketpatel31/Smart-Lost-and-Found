@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Tag, Calendar, Clock, ShieldCheck, ArrowRight, History, AlertCircle, Navigation, Compass, Map } from 'lucide-react';
+import { MapPin, Tag, Calendar, Clock, ShieldCheck, ArrowRight, History, AlertCircle, Navigation, Compass, Map, CheckCircle2, MessageSquare } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +15,7 @@ const ItemDetails = () => {
 
   const [item, setItem] = useState(null);
   const [statusHistory, setStatusHistory] = useState([]);
+  const [claimInfo, setClaimInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -42,6 +43,7 @@ const ItemDetails = () => {
         if (res.data.success) {
           setItem(res.data.item);
           setStatusHistory(res.data.statusHistory || []);
+          setClaimInfo(res.data.claimInfo || null);
         }
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load item report details.');
@@ -317,7 +319,7 @@ const ItemDetails = () => {
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge status={item.status} />
-            {item.type === 'found' && item.status !== 'Returned' && (
+            {item.type === 'found' && item.status !== 'Returned' && item.status !== 'Verified' && (
               <Link
                 to={`/submit-claim/${item._id}`}
                 className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all"
@@ -416,6 +418,133 @@ const ItemDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Claim Approval & Ownership Verification Information Card */}
+      {claimInfo && (
+        <div className={`p-6 sm:p-8 rounded-3xl shadow-sm border space-y-4 ${
+          claimInfo.status === 'Approved'
+            ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300'
+            : claimInfo.status === 'Rejected'
+            ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200'
+            : 'bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200'
+        }`}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className={`p-3 rounded-2xl shadow-md shrink-0 text-white ${
+                claimInfo.status === 'Approved'
+                  ? 'bg-emerald-600 shadow-emerald-600/20'
+                  : claimInfo.status === 'Rejected'
+                  ? 'bg-red-600 shadow-red-600/20'
+                  : 'bg-indigo-600 shadow-indigo-600/20'
+              }`}>
+                {claimInfo.status === 'Approved' ? (
+                  <ShieldCheck className="w-6 h-6" />
+                ) : claimInfo.status === 'Rejected' ? (
+                  <AlertCircle className="w-6 h-6" />
+                ) : (
+                  <Clock className="w-6 h-6" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-full ${
+                    claimInfo.status === 'Approved'
+                      ? 'bg-emerald-200/80 text-emerald-900'
+                      : claimInfo.status === 'Rejected'
+                      ? 'bg-red-200/80 text-red-900'
+                      : 'bg-indigo-200/80 text-indigo-900'
+                  }`}>
+                    {claimInfo.status === 'Approved' ? 'Claim Verified & Approved' : `Claim ${claimInfo.status}`}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-600">
+                    {claimInfo.claimId}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                  {claimInfo.status === 'Approved' ? (
+                    claimInfo.isUserClaimant
+                      ? '🎉 Your Ownership Claim has been Approved!'
+                      : claimInfo.isUserReporter
+                      ? '✅ Ownership Verified for Your Reported Item'
+                      : '✅ Verified Ownership Claim'
+                  ) : claimInfo.status === 'Rejected' ? (
+                    'Claim Not Approved'
+                  ) : (
+                    'Claim Pending Review'
+                  )}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
+                  {claimInfo.status === 'Approved' ? (
+                    claimInfo.isUserClaimant
+                      ? 'Campus security administrators have verified your ownership evidence. Please visit the Campus Security Desk / Admin Office with your College ID to complete the physical handover.'
+                      : claimInfo.isUserReporter
+                      ? 'The ownership claim for this item has been verified and approved by campus security. The handover process is now underway.'
+                      : 'An ownership claim for this item has been verified and approved by campus security.'
+                  ) : claimInfo.status === 'Rejected' ? (
+                    `Your ownership claim was not approved. Admin note: "${claimInfo.adminNote || 'Insufficient ownership evidence.'}"`
+                  ) : (
+                    'Your ownership claim has been received and is currently under review by campus security administrators.'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {claimInfo.isUserClaimant && (
+                <Link
+                  to="/my-claims"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                >
+                  View in My Claims <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
+              {claimInfo.isUserReporter && (
+                <Link
+                  to="/my-reports"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                >
+                  View in My Reports <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Decision Details & Notes */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+            <div className="bg-white/80 backdrop-blur-sm p-3.5 rounded-2xl border border-slate-200/80">
+              <span className="text-slate-500 font-semibold block text-[11px]">Verification Status</span>
+              <span className={`font-bold flex items-center gap-1 mt-0.5 ${
+                claimInfo.status === 'Approved' ? 'text-emerald-700' : 'text-slate-800'
+              }`}>
+                {claimInfo.status === 'Approved' && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                )}
+                {claimInfo.status}
+              </span>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm p-3.5 rounded-2xl border border-slate-200/80">
+              <span className="text-slate-500 font-semibold block text-[11px]">
+                {claimInfo.status === 'Approved' ? 'Approval Date' : 'Submitted Date'}
+              </span>
+              <span className="font-bold text-slate-800 block mt-0.5">
+                {claimInfo.verifiedAt
+                  ? new Date(claimInfo.verifiedAt).toLocaleDateString()
+                  : claimInfo.submittedAt
+                  ? new Date(claimInfo.submittedAt).toLocaleDateString()
+                  : 'Recently'}
+              </span>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm p-3.5 rounded-2xl border border-slate-200/80">
+              <span className="text-slate-500 font-semibold block text-[11px]">Admin Decision Note</span>
+              <span className="font-semibold text-slate-800 block mt-0.5 italic">
+                "{claimInfo.adminNote || 'Ownership verified through submitted evidence.'}"
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Interactive GSFC Campus Map View & Live Pedestrian Navigation */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 space-y-5">
